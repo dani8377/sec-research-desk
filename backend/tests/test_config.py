@@ -17,6 +17,9 @@ def test_defaults() -> None:
 
     assert settings.app_name == "SEC Research Desk"
     assert settings.debug is False
+    assert settings.sec_user_agent is None
+    assert settings.sec_request_interval_seconds == 0.2
+    assert settings.sec_cache_ttl_seconds == 3600
 
 
 def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -48,7 +51,16 @@ def test_dotenv_and_environment_precedence(
 
 @pytest.mark.parametrize(
     ("variable", "value"),
-    [("SEC_RESEARCH_DEBUG", "invalid"), ("SEC_RESEARCH_APP_NAME", "")],
+    [
+        ("SEC_RESEARCH_DEBUG", "invalid"),
+        ("SEC_RESEARCH_APP_NAME", ""),
+        ("SEC_RESEARCH_SEC_USER_AGENT", "No contact"),
+        ("SEC_RESEARCH_SEC_USER_AGENT", "Research\r\ntest@example.com"),
+        ("SEC_RESEARCH_SEC_CACHE_TTL_SECONDS", "-1"),
+        ("SEC_RESEARCH_SEC_REQUEST_INTERVAL_SECONDS", "0.01"),
+        ("SEC_RESEARCH_SEC_TIMEOUT_SECONDS", "0"),
+        ("SEC_RESEARCH_SEC_MAX_RETRIES", "6"),
+    ],
 )
 def test_invalid_configuration(
     monkeypatch: pytest.MonkeyPatch, variable: str, value: str

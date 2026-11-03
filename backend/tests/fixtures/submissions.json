@@ -1,0 +1,96 @@
+{
+  "cik": "0000320193",
+  "name": "Apple Inc.",
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "0000320193-26-000024",
+        "0001140361-26-041201",
+        "0001140361-26-040540"
+      ],
+      "filingDate": [
+        "2026-11-02",
+        "2026-10-29",
+        "2026-10-22"
+      ],
+      "reportDate": [
+        "2026-11-02",
+        "2026-10-27",
+        "2026-10-20"
+      ],
+      "acceptanceDateTime": [
+        "2026-11-02T21:30:23.000Z",
+        "2026-10-29T22:30:14.000Z",
+        "2026-10-22T22:32:20.000Z"
+      ],
+      "act": [
+        "34",
+        "",
+        ""
+      ],
+      "form": [
+        "8-K",
+        "4",
+        "4"
+      ],
+      "fileNumber": [
+        "001-36743",
+        "",
+        ""
+      ],
+      "filmNumber": [
+        "261512821",
+        "",
+        ""
+      ],
+      "items": [
+        "2.02,9.01",
+        "",
+        ""
+      ],
+      "core_type": [
+        "XBRL",
+        "4",
+        "4"
+      ],
+      "size": [
+        420455,
+        4822,
+        4822
+      ],
+      "isXBRL": [
+        1,
+        0,
+        0
+      ],
+      "isInlineXBRL": [
+        1,
+        0,
+        0
+      ],
+      "isXBRLNumeric": [
+        0,
+        0,
+        0
+      ],
+      "primaryDocument": [
+        "aapl-20261102.htm",
+        "xslF345X06/form4.xml",
+        "xslF345X06/form4.xml"
+      ],
+      "primaryDocDescription": [
+        "8-K",
+        "FORM 4",
+        "FORM 4"
+      ]
+    },
+    "files": [
+      {
+        "name": "CIK0000320193-submissions-001.json",
+        "filingCount": 1271,
+        "filingFrom": "1994-01-26",
+        "filingTo": "2015-10-03"
+      }
+    ]
+  }
+}
