@@ -22,7 +22,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             client.close()
 
-    app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+    app = FastAPI(
+        title=settings.app_name,
+        debug=settings.debug,
+        lifespan=lifespan,
+        # Full Company Facts responses can contain megabytes of JSON.
+        swagger_ui_parameters={"syntaxHighlight": False},
+    )
     app.include_router(router)
 
     @app.exception_handler(SECError)

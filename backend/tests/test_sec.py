@@ -132,6 +132,43 @@ def test_facts_preserve_values_units_periods_and_accessions(
     assert "custom" not in result.data.facts  # No invented concepts or normalization.
 
 
+def test_filtered_facts_preserve_observations_and_full_cache(
+    service: SECService,
+) -> None:
+    result = service.get_company_facts("320193", taxonomy="us-gaap", concept="Assets")
+    expected = fixture("facts.json")["facts"]["us-gaap"]["Assets"]
+    assert result.data.model_dump(mode="json", exclude_unset=True)["facts"] == {
+        "us-gaap": {"Assets": expected}
+    }
+    taxonomy = service.get_company_facts("320193", taxonomy="us-gaap")
+    assert set(taxonomy.data.facts) == {"us-gaap"}
+    assert (
+        taxonomy.data.facts["us-gaap"].keys()
+        == fixture("facts.json")["facts"]["us-gaap"].keys()
+    )
+    full = service.get_company_facts("320193")
+    assert full.data.model_dump(mode="json", exclude_unset=True) == fixture(
+        "facts.json"
+    )
+    assert result.retrieved_at == taxonomy.retrieved_at == full.retrieved_at
+    assert result.source_url == full.source_url
+
+
+@pytest.mark.parametrize(
+    ("filters", "expected"),
+    [
+        ({"concept": "Assets"}, 422),
+        ({"taxonomy": "missing"}, 404),
+        ({"taxonomy": "us-gaap", "concept": "missing"}, 404),
+        ({"taxonomy": "us-gaap", "concept": "assets"}, 404),
+    ],
+)
+def test_facts_filter_errors(service: SECService, filters: dict, expected: int) -> None:
+    with pytest.raises(SECError) as error:
+        service.get_company_facts("320193", **filters)
+    assert error.value.status_code == expected
+
+
 def test_cache_persists_between_clients(settings: Settings) -> None:
     handler = Mock(return_value=httpx.Response(200, json=fixture("tickers.json")))
     first = SECClient(settings, httpx.MockTransport(handler))
@@ -306,6 +343,24 @@ def test_api(settings: Settings, service: SECService) -> None:
         response = client.get("/companies/320193/facts")
         assert response.status_code == 200
         assert response.json()["data"]["facts"] == fixture("facts.json")["facts"]
+        filtered = client.get(
+            "/companies/320193/facts",
+            params={"taxonomy": "us-gaap", "concept": "Assets"},
+        )
+        assert filtered.status_code == 200
+        assert filtered.json()["data"]["facts"] == {
+            "us-gaap": {"Assets": fixture("facts.json")["facts"]["us-gaap"]["Assets"]}
+        }
+        for params, status in [
+            ({"concept": "Assets"}, 422),
+            ({"taxonomy": ""}, 422),
+            ({"taxonomy": "missing"}, 404),
+            ({"taxonomy": "us-gaap", "concept": "missing"}, 404),
+        ]:
+            assert (
+                client.get("/companies/320193/facts", params=params).status_code
+                == status
+            )
         assert client.get("/companies/789019/facts").status_code == 502
         for path in [
             "/companies?q=%20%20",

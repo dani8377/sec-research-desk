@@ -115,12 +115,30 @@ class SECService:
             )
         return results
 
-    def get_company_facts(self, cik: str) -> FactsResult:
+    def get_company_facts(
+        self, cik: str, *, taxonomy: str | None = None, concept: str | None = None
+    ) -> FactsResult:
         cik = normalize_cik(cik)
+        if concept is not None and taxonomy is None:
+            raise SECError("Provide a taxonomy when filtering by concept", 422)
         source = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
         data, retrieved_at = self.client.get(source, CompanyFacts)
         if normalize_cik(data.cik) != cik:
             raise SECError("SEC Company Facts CIK does not match the requested company")
+        if taxonomy is not None:
+            if taxonomy not in data.facts:
+                raise SECError(
+                    "Requested taxonomy is absent from SEC Company Facts", 404
+                )
+            concepts = data.facts[taxonomy]
+            if concept is not None:
+                if concept not in concepts:
+                    raise SECError(
+                        "Requested concept is absent from SEC Company Facts", 404
+                    )
+                concepts = {concept: concepts[concept]}
+            # Keep the complete response in the cache; filter only this result.
+            data = data.model_copy(update={"facts": {taxonomy: concepts}})
         return FactsResult(
             cik=cik, source_url=source, retrieved_at=retrieved_at, data=data
         )

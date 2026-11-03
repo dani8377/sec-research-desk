@@ -70,6 +70,7 @@ curl 'http://127.0.0.1:8000/companies?q=AAPL'
 curl 'http://127.0.0.1:8000/companies/320193/filings?form=10-K'
 curl 'http://127.0.0.1:8000/companies/320193/filings?include_historical=true'
 curl 'http://127.0.0.1:8000/companies/320193/facts'
+curl 'http://127.0.0.1:8000/companies/320193/facts?taxonomy=us-gaap&concept=Assets'
 ```
 
 Company lookup matches an exact ticker or CIK, or part of a company name,
@@ -86,6 +87,14 @@ Each filing retains its CIK, accession number, filing/report dates and source UR
 Company Facts retains the SEC taxonomy/concept/unit structure and original
 observation fields, including periods and filing references. The response adds
 the source URL and retrieval time (the original fetch time on cache hits).
+Full responses can contain several megabytes of JSON, making browser display
+slow. For interactive testing in `/docs`, set `taxonomy=us-gaap` and
+`concept=Assets` to view a smaller result. Filters are exact and case-sensitive;
+`concept` requires `taxonomy` (`422` otherwise), and missing taxonomies or
+concepts return `404`. Filtering preserves all observations and source metadata
+for the selected concepts; the complete upstream response remains cached.
+The first request still downloads the complete SEC Company Facts response.
+Syntax highlighting is disabled in `/docs` to reduce display overhead.
 No metrics, period selection or cross-company normalization are performed.
 The [SEC Company Facts API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
 covers standard taxonomy facts applying to the whole entity; custom concepts

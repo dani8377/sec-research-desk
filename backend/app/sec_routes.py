@@ -45,5 +45,11 @@ def get_company_filings(
 @router.get(
     "/{cik}/facts", response_model=FactsResult, response_model_exclude_unset=True
 )
-def get_company_facts(cik: CIK, service: Service) -> FactsResult:
-    return service.get_company_facts(cik)
+def get_company_facts(
+    cik: CIK,
+    service: Service,
+    taxonomy: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    concept: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+) -> FactsResult:
+    """Retrieve facts; filter by taxonomy and concept for smaller responses."""
+    return service.get_company_facts(cik, taxonomy=taxonomy, concept=concept)
