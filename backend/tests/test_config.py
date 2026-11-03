@@ -60,6 +60,17 @@ def test_dotenv_and_environment_precedence(
         ("SEC_RESEARCH_SEC_REQUEST_INTERVAL_SECONDS", "0.01"),
         ("SEC_RESEARCH_SEC_TIMEOUT_SECONDS", "0"),
         ("SEC_RESEARCH_SEC_MAX_RETRIES", "6"),
+        ("SEC_RESEARCH_EMBEDDING_DIMENSIONS", "0"),
+        ("SEC_RESEARCH_EMBEDDING_BATCH_SIZE", "0"),
+        ("SEC_RESEARCH_EMBEDDING_TIMEOUT_SECONDS", "0"),
+        ("SEC_RESEARCH_RAG_CHUNK_SIZE", "99"),
+        ("SEC_RESEARCH_RAG_CHUNK_OVERLAP", "1800"),
+        ("SEC_RESEARCH_CHAT_MODEL", ""),
+        ("SEC_RESEARCH_CHAT_TIMEOUT_SECONDS", "0"),
+        ("SEC_RESEARCH_CHAT_CONTEXT_SIZE", "0"),
+        ("SEC_RESEARCH_CHAT_MAX_TOKENS", "0"),
+        ("SEC_RESEARCH_RESEARCH_MAX_TOOL_CALLS", "0"),
+        ("SEC_RESEARCH_RESEARCH_MAX_CONTEXT_CHARS", "0"),
     ],
 )
 def test_invalid_configuration(

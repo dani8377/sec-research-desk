@@ -1,7 +1,8 @@
 # SEC Research Desk
 
-A local-first research application for US company SEC filings. Milestones 1–2
-provide a FastAPI backend, company lookup, filing histories and Company Facts.
+A local-first research application for US company SEC filings. Milestones 1–4
+provide a FastAPI backend, SEC data access, annual-filing evidence retrieval
+and a LangChain research baseline using local Ollama models and PostgreSQL/pgvector.
 
 ## Install on macOS
 
@@ -111,6 +112,173 @@ Rate limiting is shared by threads within one application process. Run one
 backend worker locally and account for other SEC clients on the same network;
 multiple processes do not share a rate limiter.
 
+## Annual-filing retrieval (milestone 3)
+
+Install and start Docker Desktop. From the repository root, start PostgreSQL:
+
+```bash
+docker compose up -d --wait postgres
+```
+
+Compose binds PostgreSQL to `127.0.0.1:5432` and persists data in a named volume.
+The included credentials are for local development. `docker compose stop`
+stops the database without removing its data. The backend creates the vector
+extension and chunk table on first use; the database role needs permission to
+create them. No database or Ollama connection is required for health/SEC APIs.
+
+Install [Ollama for macOS](https://ollama.com/download/mac), launch it, and pull
+the embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Ollama runs natively on macOS. Filing ingestion and search only need the
+embedding model; the research baseline also uses Qwen (see below). Embeddings use LangChain's
+[Ollama integration](https://docs.langchain.com/oss/python/integrations/embeddings/ollama).
+The Nomic model uses the documented
+[document/query prefixes](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5#task-instruction-prefixes).
+
+Additional settings (all use the `SEC_RESEARCH_` prefix):
+
+| Variable suffix | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `postgresql://sec_research:sec_research@127.0.0.1:5432/sec_research` | Local PostgreSQL connection |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Local Ollama server |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | Installed embedding model |
+| `EMBEDDING_DIMENSIONS` | `768` | Expected output size; mismatches fail explicitly |
+| `EMBEDDING_BATCH_SIZE` | `16` | Maximum chunks per embedding request |
+| `EMBEDDING_TIMEOUT_SECONDS` | `120` | Timeout per local model request |
+| `RAG_CHUNK_SIZE` | `1800` | Maximum characters per chunk |
+| `RAG_CHUNK_OVERLAP` | `200` | Character overlap within a section; must be smaller than chunk size |
+
+With the backend running and the SEC contact header configured, select an
+accession from `/companies/320193/filings?form=10-K` and ingest it. This example
+uses Apple's 2025 annual filing:
+
+```bash
+curl -X POST http://127.0.0.1:8000/rag/ingest \
+  -H 'Content-Type: application/json' \
+  -d '{"cik":"320193","accession_number":"0000320193-25-000079"}'
+
+curl -X POST http://127.0.0.1:8000/rag/search \
+  -H 'Content-Type: application/json' \
+  -d '{"cik":"320193","query":"supply chain risks","limit":5}'
+```
+
+Ingestion resolves the primary document through SEC submissions, downloads it
+using the existing cache/rate limiter, removes hidden HTML/XBRL and navigation,
+splits at recognized Item headings and creates overlapping chunks within each
+section. Content without recognized headings has an explicit unidentified
+section label. The response includes the filing, chunk count, model and parser
+warnings. Only HTML `10-K` primary documents are supported; amendments, quarterly
+reports, PDFs and plain-text filings are outside this milestone. Set
+`include_historical=true` in the ingestion body for older submission histories.
+
+Ingestion runs synchronously and may take time on a cold cache. Re-ingesting
+replaces that filing's chunks for the selected model in one transaction, after
+all embeddings succeed; a failure preserves the previous stored evidence.
+Search never downloads or ingests documents automatically.
+
+Search requires a company CIK and accepts optional `accession_number`, `section`
+(exact returned section label or Item identifier such as `Item 7`),
+`report_date_from`, `report_date_to` (inclusive report dates), and `limit` (1–20). The supported `form` is `10-K`. It uses exact
+cosine search in pgvector, filtered by company, model and dimensions. Each result
+contains similarity and the verbatim normalized chunk text, original filing URL,
+CIK, accession, filing/report dates, form, section and retrieval timestamp.
+`char_start`/`char_end` are section-relative offsets into normalized extracted
+text, not HTML byte positions. They and the stable `chunk_id` identify evidence;
+no invented URL fragments or page numbers are added. An empty result means no
+indexed evidence matches the filters. Similarity alone does not establish that
+evidence supports a claim; answer synthesis and validation come later.
+
+Parser section detection is heuristic, and tables are linearized text rather
+than validated financial data. Retrieved text remains untrusted source content.
+The parser has been smoke-tested on Apple's full 2025 10-K; broader filing-format
+coverage and retrieval-quality evaluation remain future work. Model names and
+dimensions separate vector spaces. Pin a model tag and re-ingest when its weights
+or chunk settings change; changing weights under the same tag is not detected.
+Other embedding models may require their own input-prefix configuration in code.
+Ollama/database failures return `503`; invalid embedding outputs return `502`.
+
+## Research baseline (milestone 4)
+
+With Ollama running, install the chat model:
+
+```bash
+ollama pull qwen3:8b
+```
+
+Ingest the relevant annual filings using `/rag/ingest` first. Then:
+
+```bash
+curl -X POST http://127.0.0.1:8000/research/baseline \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What supply chain risks does Apple report? Identify the filing period."}'
+```
+
+The baseline uses `ChatOllama` and typed LangChain tools for company lookup,
+recent annual filing history and metadata-filtered search of indexed sections.
+It executes a simple bounded tool loop, followed by a separate native Ollama
+JSON-schema output call validated with Pydantic. This is the baseline for later
+LangGraph comparison; no graph, checkpointing or autonomous ingestion is added.
+No new framework is needed: `langchain-core` is declared directly alongside the
+existing `langchain-ollama` integration.
+
+The response contains `status` (`answered` or `insufficient_evidence`), `claims`,
+`limitations`, `evidence`, `model`, `tools_called`, `model_calls` and `tool_errors`.
+Each claim is marked `reported_fact` or `interpretation` and cites retrieved chunk IDs.
+Synthesis receives the original question and retrieved evidence directly, without
+intermediate model prose. Python rejects unknown IDs and attaches the original
+text and filing metadata.
+Company lookup and filing history are navigation tools, not claim evidence.
+Missing indexed data should produce an explicit insufficient-evidence result.
+SEC/RAG failures abort the request rather than becoming successful empty results.
+An invalid tool input gets one correction opportunity via an explicit error tool
+message; a second invalid attempt fails. Invalid attempts consume the tool budget
+and remain visible in `tools_called` and `tool_errors` if correction succeeds.
+Malformed model outputs, invalid tool calls, invented citations and exceeded
+budgets fail explicitly (`502`); model/connection/parsing failures return `503`.
+Underlying SEC/RAG failures retain their HTTP status. There are no model-request
+retries or silent format fallbacks. Health and SEC APIs do not require a chat model.
+
+Additional settings use the `SEC_RESEARCH_` prefix:
+
+| Variable suffix | Default | Purpose |
+| --- | --- | --- |
+| `CHAT_MODEL` | `qwen3:8b` | Installed model supporting tools and JSON-schema output |
+| `CHAT_TIMEOUT_SECONDS` | `180` | Timeout per model request |
+| `CHAT_CONTEXT_SIZE` | `16384` | Ollama context tokens |
+| `CHAT_MAX_TOKENS` | `2048` | Maximum generated tokens per call |
+| `RESEARCH_MAX_TOOL_CALLS` | `6` | Total tool attempts, including invalid inputs and multi-call responses |
+| `RESEARCH_MAX_CONTEXT_CHARS` | `24000` | Character budget for accumulated messages |
+
+At most the tool budget plus two model calls run per request. The character
+budget is a conservative guard, not an exact tokenizer count; reduce it for
+smaller model contexts. Chat weights are released after each call (`keep_alive=0`)
+to limit persistent memory usage, at the cost of additional loading latency.
+Requests are synchronous and can take several minutes. Use one local request at
+a time. Model configuration must support tool calling and native structured
+outputs; switching models requires rerunning the opt-in integration test.
+
+This milestone supports qualitative annual-filing research. It has no Company
+Facts or financial calculation tool and must report those questions as unsupported
+when numerical analysis is required. It checks citation identity, not semantic
+entailment: a valid citation can still support an incorrect interpretation.
+Prompt instructions treat filing text as untrusted, but are not a guarantee
+against prompt injection. Answer quality, unsupported claims and retrieval
+relevance need the milestone 7 evaluation dataset. Search only covers ingested
+filings; it does not establish that they are the latest filings available.
+
+The normal tests use scripted model outputs and synthetic evidence. To test
+actual tool calling, structured outputs and a complete baseline execution
+against the configured local model (synthetic services, no live SEC calls):
+
+```bash
+cd backend
+SEC_RESEARCH_TEST_CHAT=1 uv run pytest tests/test_research.py -k real_ollama
+```
+
 ## Test and lint
 
 From `backend/`:
@@ -123,3 +291,16 @@ uv run ruff format --check .
 
 To apply formatting, run `uv run ruff format .`.
 Tests run locally without external services or live SEC requests.
+
+Optional checks against a running local database and an installed Ollama model,
+from `backend/`:
+
+```bash
+SEC_RESEARCH_TEST_DATABASE_URL=postgresql://sec_research:sec_research@127.0.0.1:5432/sec_research \
+  uv run pytest tests/test_rag_postgres.py
+SEC_RESEARCH_TEST_OLLAMA=1 uv run pytest tests/test_rag.py -k real_ollama
+```
+
+Database tests create and remove a unique test schema; use a local test database
+with schema/extension creation permissions. Optional checks are skipped unless
+enabled. See [fixture provenance and test limitations](backend/tests/fixtures/README.md).

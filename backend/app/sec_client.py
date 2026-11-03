@@ -11,7 +11,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import httpx
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
 from app.config import Settings
 
@@ -22,6 +22,17 @@ class SECError(Exception):
     def __init__(self, message: str, status_code: int = 502) -> None:
         super().__init__(message)
         self.status_code = status_code
+
+
+class FilingHTML(BaseModel):
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def html_document(cls, value: str) -> str:
+        if not any(tag in value.lower() for tag in ("<html", "<body")):
+            raise ValueError("Expected an HTML filing")
+        return value
 
 
 class SECClient:
@@ -46,6 +57,15 @@ class SECClient:
     def get[Model: BaseModel](
         self, url: str, schema: type[Model]
     ) -> tuple[Model, datetime]:
+        return self._get(url, schema)
+
+    def get_filing_html(self, url: str) -> tuple[str, datetime]:
+        result, retrieved_at = self._get(url, FilingHTML, html=True)
+        return result.content, retrieved_at
+
+    def _get[Model: BaseModel](
+        self, url: str, schema: type[Model], *, html: bool = False
+    ) -> tuple[Model, datetime]:
         if not self.settings.sec_user_agent:
             raise SECError(
                 "Set SEC_RESEARCH_SEC_USER_AGENT to your application name "
@@ -54,19 +74,24 @@ class SECClient:
             )
         # One client is shared across API threads, including retries and cache writes.
         with self._lock:
-            path = (
-                self.settings.sec_cache_dir
-                / f"{hashlib.sha256(url.encode()).hexdigest()}.json"
-            )
+            cache_key = url + ("#html" if html else "")
+            digest = hashlib.sha256(cache_key.encode()).hexdigest()
+            path = self.settings.sec_cache_dir / f"{digest}.json"
             cached = self._read_cache(path, schema)
             if cached is not None:
                 return cached
-            payload = self._download(url)
+            payload = self._download(
+                url, accept="text/html" if html else "application/json"
+            )
+            if html:
+                payload = json.dumps({"content": payload})
             try:
                 result = schema.model_validate_json(payload)
             except ValidationError as exc:
                 raise SECError(
-                    "SEC returned malformed or unexpected JSON data"
+                    "SEC returned malformed or unexpected HTML data"
+                    if html
+                    else "SEC returned malformed or unexpected JSON data"
                 ) from exc
             retrieved_at = datetime.now(UTC)
             self._write_cache(path, payload, retrieved_at)
@@ -131,7 +156,7 @@ class SECClient:
             return max(0, delay)
         return float(2**attempt)
 
-    def _download(self, url: str) -> str:
+    def _download(self, url: str, *, accept: str = "application/json") -> str:
         for attempt in range(self.settings.sec_max_retries + 1):
             wait = self.settings.sec_request_interval_seconds - (
                 time.monotonic() - self._last_request
@@ -140,7 +165,7 @@ class SECClient:
                 time.sleep(wait)
             self._last_request = time.monotonic()
             try:
-                response = self.http.get(url)
+                response = self.http.get(url, headers={"Accept": accept})
             except httpx.RequestError as exc:
                 if attempt == self.settings.sec_max_retries:
                     raise SECError("SEC request failed or timed out", 503) from exc
