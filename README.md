@@ -1,8 +1,9 @@
 # SEC Research Desk
 
-A local-first research application for US company SEC filings. Milestones 1–4
-provide a FastAPI backend, SEC data access, annual-filing evidence retrieval
-and a LangChain research baseline using local Ollama models and PostgreSQL/pgvector.
+A local-first research application for US company SEC filings. Milestones 1–5
+provide a FastAPI backend, SEC data access, annual-filing evidence retrieval,
+and LangChain baseline and LangGraph research workflows using local Ollama models and
+PostgreSQL/pgvector.
 
 ## Install on macOS
 
@@ -221,7 +222,7 @@ The baseline uses `ChatOllama` and typed LangChain tools for company lookup,
 recent annual filing history and metadata-filtered search of indexed sections.
 It executes a simple bounded tool loop, followed by a separate native Ollama
 JSON-schema output call validated with Pydantic. This is the baseline for later
-LangGraph comparison; no graph, checkpointing or autonomous ingestion is added.
+LangGraph comparison; the baseline runs independently of the graph below.
 No new framework is needed: `langchain-core` is declared directly alongside the
 existing `langchain-ollama` integration.
 
@@ -278,6 +279,78 @@ against the configured local model (synthetic services, no live SEC calls):
 cd backend
 SEC_RESEARCH_TEST_CHAT=1 uv run pytest tests/test_research.py -k real_ollama
 ```
+
+## LangGraph research workflow (milestone 5)
+
+The graph uses the same model, research tools, synthesis prompt and citation
+validator as the baseline. It adds a structured planning call and explicit nodes
+for tool selection, individual tool execution, synthesis and validation.
+Planning routes unsupported requests directly to an insufficient-evidence result.
+Empty retrieval also skips model synthesis. Tool selection can return to retrieval
+within the existing tool budget. No financial calculations or MCP tools are added.
+
+With PostgreSQL and Ollama running and the relevant annual filings indexed:
+
+```bash
+curl -X POST http://127.0.0.1:8000/research/graph \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What supply chain risks does Apple report? Identify the filing period."}'
+```
+
+The response includes `run_id`, `status` (`running`, `completed` or `failed`),
+`plan`, `result`, `errors`, `tools_called`, `model_calls` and `next_nodes`.
+`completed` means the workflow finished; inspect `result.status` to distinguish
+an answer from insufficient evidence. `result` has the baseline response schema.
+Failed workflows have no result and include the failing stage, message and
+underlying status code. These saved failures return HTTP `200` as run records;
+request validation and checkpoint/access failures use HTTP error responses.
+
+Checkpoints store the question, plan, tool messages, retrieved evidence, call
+counters, draft, validated result and errors in the local PostgreSQL database.
+Tables are created on first graph use with the official
+[PostgreSQL checkpointer](https://docs.langchain.com/oss/python/langgraph/add-memory).
+The database role needs table/index creation permissions. The baseline, SEC and
+health endpoints do not require checkpoint storage.
+
+Use the returned UUID to inspect or resume a run:
+
+```text
+GET  /research/graph/{run_id}
+POST /research/graph/{run_id}/resume
+```
+
+Supply an optional UUID `run_id` in the initial JSON body to retain a known ID
+if the HTTP request is interrupted. Duplicate IDs return `409`; unknown runs
+return `404`. Each successful node is checkpointed synchronously, including each
+individual tool in a batch. Resume continues pending nodes after a process
+interruption; a tool interrupted before its checkpoint may execute again.
+Completed and terminal failed runs are returned unchanged by resume. Start a new
+run after correcting a terminal failure. There are no automatic model retries;
+invalid tool arguments receive one correction opportunity, and existing SEC
+retries remain bounded. Keep the same configuration when resuming; a changed
+chat model is rejected. Checkpoint storage has no automatic retention policy.
+
+Use one backend worker and one research request at a time. Concurrent graph
+requests return `409`, and a PostgreSQL advisory lock prevents two processes from
+advancing the same run. Requests remain synchronous. The graph makes at most the
+tool budget plus three model calls, including planning. Citation validation checks
+retrieved IDs and attaches original metadata; semantic support, numerical accuracy
+and planning quality still require evaluation. This workflow retains the baseline's
+annual-filing scope and prompt-injection limitations.
+
+Normal graph tests use scripted models and in-memory checkpoints. Opt-in tests
+exercise real local inference and PostgreSQL persistence with synthetic evidence:
+
+```bash
+cd backend
+SEC_RESEARCH_TEST_CHAT=1 uv run pytest tests/test_research_graph.py -k real_ollama
+SEC_RESEARCH_TEST_DATABASE_URL=postgresql://sec_research:sec_research@127.0.0.1:5432/sec_research \
+  uv run pytest tests/test_research_graph.py -k postgres
+```
+
+The PostgreSQL test creates and removes a unique test schema. Neither integration
+test sends SEC requests. No comparative quality or reliability improvement is
+claimed before the milestone 7 evaluation.
 
 ## Test and lint
 

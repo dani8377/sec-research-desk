@@ -1,6 +1,7 @@
 """Bounded LangChain tool-calling baseline, without graph orchestration."""
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 from langchain_core.messages import (
@@ -23,6 +24,8 @@ from app.research_prompts import RESEARCH_SYSTEM, SYNTHESIS
 from app.research_tools import research_tools
 from app.sec_client import SECError
 from app.sec_service import SECService
+
+ModelInvoker = Callable[[Runnable[Any, Any], list[BaseMessage]], Any]
 
 
 class ResearchError(Exception):
@@ -125,11 +128,24 @@ class ResearchService:
                 raise ResearchError(
                     "Research context limit exceeded; narrow the question"
                 )
+        draft = self.synthesize(model, request.question, evidence)
+        return self.validate_result(
+            draft, evidence, called, model_calls + 1, tool_errors
+        )
+
+    def synthesize(
+        self,
+        model: ChatOllama,
+        question: str,
+        evidence: dict[str, Evidence],
+        *,
+        invoke: ModelInvoker | None = None,
+    ) -> ResearchDraft:
         # Synthesis receives the original question and verified tool data directly,
         # without intermediate model prose or tool-call syntax to imitate.
         synthesis_input = json.dumps(
             {
-                "question": request.question,
+                "question": question,
                 "evidence": [
                     {
                         "evidence_id": item.chunk.chunk_id,
@@ -147,17 +163,25 @@ class ResearchService:
             > self.settings.research_max_context_chars
         ):
             raise ResearchError("Research context limit exceeded; narrow the question")
-        draft = self._invoke(
+        draft = (invoke or self._invoke)(
             model.with_structured_output(ResearchDraft, method="json_schema"),
             [SystemMessage(SYNTHESIS), HumanMessage(synthesis_input)],
         )
-        model_calls += 1
         try:
-            draft = ResearchDraft.model_validate(draft)
+            return ResearchDraft.model_validate(draft)
         except ValidationError as exc:
             raise ResearchError(
                 "Ollama returned an invalid structured research answer"
             ) from exc
+
+    def validate_result(
+        self,
+        draft: ResearchDraft,
+        evidence: dict[str, Evidence],
+        called: list[str],
+        model_calls: int,
+        tool_errors: list[str],
+    ) -> ResearchResult:
         cited = list(
             dict.fromkeys(key for claim in draft.claims for key in claim.evidence_ids)
         )

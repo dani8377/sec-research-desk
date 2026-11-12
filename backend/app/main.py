@@ -9,6 +9,7 @@ from app.rag_embeddings import LocalEmbeddings, RAGError
 from app.rag_routes import router as rag_router
 from app.rag_service import RAGService
 from app.rag_store import VectorStore
+from app.research_graph import GraphResearchService
 from app.research_routes import router as research_router
 from app.research_service import ResearchError, ResearchService
 from app.sec_client import SECClient, SECError
@@ -30,6 +31,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings,
         )
         app.state.research_service = ResearchService(
+            app.state.sec_service, app.state.rag_service, settings
+        )
+        app.state.graph_research_service = GraphResearchService(
             app.state.sec_service, app.state.rag_service, settings
         )
         try:
