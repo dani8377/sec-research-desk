@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     chat_max_tokens: int = Field(default=2048, ge=128, le=8192)
     research_max_tool_calls: int = Field(default=6, ge=1, le=12)
     research_max_context_chars: int = Field(default=24000, ge=4000, le=48000)
+    mcp_timeout_seconds: float = Field(default=180, gt=0, le=600)
     embedding_model: str = Field(default="nomic-embed-text", min_length=1)
     embedding_dimensions: int = Field(default=768, ge=1, le=4096)
     embedding_batch_size: int = Field(default=16, ge=1, le=64)

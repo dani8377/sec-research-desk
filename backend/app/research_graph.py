@@ -26,6 +26,7 @@ from psycopg.rows import dict_row
 from pydantic import ValidationError
 
 from app.config import Settings
+from app.mcp_client import mcp_research_tools
 from app.rag_embeddings import RAGError
 from app.rag_models import Evidence
 from app.rag_service import RAGService
@@ -42,7 +43,6 @@ from app.research_service import (
     ResearchService,
     chat_model,
 )
-from app.research_tools import research_tools
 from app.sec_client import SECError
 from app.sec_service import SECService
 
@@ -274,7 +274,7 @@ class GraphResearchService(ResearchService):
         return {"plan": plan.model_dump(mode="json"), "messages": data}
 
     def _select_tools(self, state: ResearchState, invoke: ModelInvoker) -> dict:
-        tools = research_tools(self.sec, self.rag, {})
+        tools = mcp_research_tools(self.settings, {})
         self._check_context(state["messages"])
         reply = invoke(
             chat_model(self.settings).bind_tools(tools),
@@ -305,7 +305,7 @@ class GraphResearchService(ResearchService):
             for key, item in state["evidence"].items()
         }
         tools = {
-            tool.name: tool for tool in research_tools(self.sec, self.rag, evidence)
+            tool.name: tool for tool in mcp_research_tools(self.settings, evidence)
         }
         call = state["pending_tools"][0]
         called = state["tools_called"] + [call["name"]]
@@ -343,7 +343,7 @@ class GraphResearchService(ResearchService):
             )
             errors.append(f"{call['name']}: {content}")
             status = "error"
-        except (SECError, RAGError) as exc:
+        except (SECError, RAGError, ResearchError) as exc:
             return {
                 "tools_called": called,
                 "status": "failed",

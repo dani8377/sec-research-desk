@@ -23,11 +23,16 @@ from app.research_graph import GraphResearchService
 from app.research_models import GraphResearchRequest, ResearchPlan
 from app.research_routes import get_graph_service
 from app.research_service import ResearchError
+from app.research_tools import research_tools
 
 
 @pytest.fixture
 def graph_setup(monkeypatch: pytest.MonkeyPatch, evidence: Evidence) -> tuple:
     sec, rag, model = Mock(), Mock(), Mock()
+    monkeypatch.setattr(
+        "app.research_graph.mcp_research_tools",
+        lambda settings, evidence: research_tools(sec, rag, evidence),
+    )
     rag.search.return_value = SearchResult(embedding_model="test", evidence=[evidence])
     planner, synthesizer = Mock(), Mock()
     planner.invoke.return_value = ResearchPlan(
@@ -358,9 +363,13 @@ def test_postgres_checkpoint_survives_connection_restart(
 @pytest.mark.skipif(
     os.environ.get("SEC_RESEARCH_TEST_CHAT") != "1", reason="Opt-in local Ollama test"
 )
-def test_real_ollama_graph(evidence: Evidence) -> None:
+def test_real_ollama_graph(evidence: Evidence, monkeypatch: pytest.MonkeyPatch) -> None:
     # Real planning, tools and synthesis, with synthetic evidence and no SEC traffic.
     sec, rag = Mock(), Mock()
+    monkeypatch.setattr(
+        "app.research_graph.mcp_research_tools",
+        lambda settings, evidence: research_tools(sec, rag, evidence),
+    )
     rag.search.return_value = SearchResult(embedding_model="test", evidence=[evidence])
     service = GraphResearchService(sec, rag, Settings(), checkpointer=InMemorySaver())
     result = service.run(

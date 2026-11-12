@@ -287,7 +287,8 @@ validator as the baseline. It adds a structured planning call and explicit nodes
 for tool selection, individual tool execution, synthesis and validation.
 Planning routes unsupported requests directly to an insufficient-evidence result.
 Empty retrieval also skips model synthesis. Tool selection can return to retrieval
-within the existing tool budget. No financial calculations or MCP tools are added.
+within the existing tool budget. Milestone 6 routes its tools through MCP (see below);
+financial calculations remain unsupported.
 
 With PostgreSQL and Ollama running and the relevant annual filings indexed:
 
@@ -351,6 +352,63 @@ SEC_RESEARCH_TEST_DATABASE_URL=postgresql://sec_research:sec_research@127.0.0.1:
 The PostgreSQL test creates and removes a unique test schema. Neither integration
 test sends SEC requests. No comparative quality or reliability improvement is
 claimed before the milestone 7 evaluation.
+
+## MCP research tools (milestone 6)
+
+The official Python MCP SDK exposes the same three read-only research tools:
+
+| Tool | Inputs | Output |
+| --- | --- | --- |
+| `find_company` | `query`, optional `limit` (1–10) | SEC company matches and source URLs |
+| `get_company_filings` | `cik`, optional `limit` (1–10) | Recent 10-K metadata with original source references |
+| `search_filing_sections` | `cik`, `query`, optional filing/section/date filters and `limit` (1–5) | Indexed evidence with chunk IDs, text and filing metadata |
+
+Run the standalone stdio server from `backend/`:
+
+```bash
+uv run python -m app.mcp_server
+```
+
+For a local MCP client, use the absolute path to `backend/.venv/bin/python` as
+its command, arguments `["-m", "app.mcp_server"]`, and `backend/` as its working
+directory. The server loads the existing root `.env`. Protocol messages use
+stdout; diagnostics use stderr. No listening port or additional service is needed.
+Discovery publishes explicit input/output JSON schemas and read-only annotations.
+Pydantic also checks semantic constraints such as CIKs and ordered date filters.
+Tool failures set MCP `isError`; service errors retain their message and status
+in structured error data. Successful empty searches remain successful empty results.
+
+`/research/graph` now consumes these tools through the official MCP stdio client.
+Each tool call launches and closes a local server process, initializes a session,
+discovers the tool, invokes it and validates its structured output. This simple
+lifecycle adds process startup overhead but leaves no persistent MCP worker.
+The child receives the API's validated settings; it does not replace explicit
+settings with values from `.env`. `SEC_RESEARCH_MCP_TIMEOUT_SECONDS` defaults to
+180 seconds and bounds startup, discovery and invocation together. Transport
+failures/timeouts become explicit failed graph runs; there is no direct-call
+fallback. Invalid model arguments still get the graph's existing one correction
+opportunity before any MCP request. Retrieved evidence remains in graph checkpoints
+and passes through the existing citation validator. The baseline keeps direct
+service calls with the same schemas and descriptions for later comparison.
+
+Scope remains qualitative research over already indexed annual reports. The
+planned `get_company_facts`, `get_filing_content` and
+`compare_financial_metrics` MCP tools are not exposed in this milestone: bounded
+fact selection, direct filing-content contracts and deterministic metric analysis
+remain future work. Existing HTTP Company Facts and RAG ingestion are unchanged.
+One local research request at a time is still the supported operating mode.
+
+Offline interface tests use real subprocess stdio sessions with synthetic services,
+including a graph run through MCP, error propagation and citation preservation:
+
+```bash
+cd backend
+uv run pytest tests/test_mcp.py
+```
+
+These tests do not evaluate real-model answer quality. The existing opt-in Ollama
+graph test isolates model behavior with direct synthetic tools; MCP transport is
+covered separately by the interface tests.
 
 ## Test and lint
 

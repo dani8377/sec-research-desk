@@ -5,9 +5,14 @@ from typing import Annotated
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from app.rag_models import CompanyCIK, Evidence, SearchRequest
+from app.rag_models import CompanyCIK, Evidence, SearchRequest, SearchResult
 from app.rag_service import RAGService
+from app.sec_models import Company, FilingHistory
 from app.sec_service import SECService
+
+
+class CompanyResult(BaseModel):
+    companies: list[Company]
 
 
 class CompanyQuery(BaseModel):
@@ -56,29 +61,39 @@ def research_tools(
             evidence[item.chunk.chunk_id] = item
         return result.model_dump(mode="json")
 
+    functions = {
+        "find_company": find_company,
+        "get_company_filings": get_company_filings,
+        "search_filing_sections": search_filing_sections,
+    }
     return [
         StructuredTool.from_function(
-            find_company,
-            name="find_company",
-            description="Find SEC companies by ticker, CIK or name.",
-            args_schema=CompanyQuery,
-        ),
-        StructuredTool.from_function(
-            get_company_filings,
-            name="get_company_filings",
-            description="List recent 10-K filings; older history is not included.",
-            args_schema=FilingQuery,
-        ),
-        StructuredTool.from_function(
-            search_filing_sections,
-            name="search_filing_sections",
-            description=(
-                "Search already indexed 10-K sections by CIK and optional filing/"
-                "period filters. Use limit=3 (maximum 5). section accepts an exact "
-                "title or Item identifier such as Item 7. "
-                "Empty results mean no matching indexed evidence. "
-                "Cite chunk.chunk_id. Does not download or ingest filings."
-            ),
-            args_schema=EvidenceQuery,
-        ),
+            functions[name], name=name, description=description, args_schema=schema
+        )
+        for name, description, schema in TOOL_DEFINITIONS
     ]
+
+
+TOOL_DEFINITIONS: tuple[tuple[str, str, type[BaseModel]], ...] = (
+    ("find_company", "Find SEC companies by ticker, CIK or name.", CompanyQuery),
+    (
+        "get_company_filings",
+        "List recent 10-K filings; older history is not included.",
+        FilingQuery,
+    ),
+    (
+        "search_filing_sections",
+        "Search already indexed 10-K sections by CIK and optional filing/"
+        "period filters. Use limit=3 (maximum 5). section accepts an exact "
+        "title or Item identifier such as Item 7. "
+        "Empty results mean no matching indexed evidence. "
+        "Cite chunk.chunk_id. Does not download or ingest filings.",
+        EvidenceQuery,
+    ),
+)
+
+OUTPUT_MODELS: dict[str, type[BaseModel]] = {
+    "find_company": CompanyResult,
+    "get_company_filings": FilingHistory,
+    "search_filing_sections": SearchResult,
+}
