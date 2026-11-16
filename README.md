@@ -267,8 +267,9 @@ Facts or financial calculation tool and must report those questions as unsupport
 when numerical analysis is required. It checks citation identity, not semantic
 entailment: a valid citation can still support an incorrect interpretation.
 Prompt instructions treat filing text as untrusted, but are not a guarantee
-against prompt injection. Answer quality, unsupported claims and retrieval
-relevance need the milestone 7 evaluation dataset. Search only covers ingested
+against prompt injection. The [milestone 7 evaluation](backend/evaluation/README.md) provides initial
+source-backed checks; semantic answer quality, unsupported claims and retrieval
+relevance still require review of the saved evidence. Search only covers ingested
 filings; it does not establish that they are the latest filings available.
 
 The normal tests use scripted model outputs and synthetic evidence. To test
@@ -350,8 +351,8 @@ SEC_RESEARCH_TEST_DATABASE_URL=postgresql://sec_research:sec_research@127.0.0.1:
 ```
 
 The PostgreSQL test creates and removes a unique test schema. Neither integration
-test sends SEC requests. No comparative quality or reliability improvement is
-claimed before the milestone 7 evaluation.
+test sends SEC requests. See the [milestone 7 evaluation](backend/evaluation/README.md) for the paired
+comparison and its quality and reliability limitations.
 
 ## MCP research tools (milestone 6)
 
@@ -409,6 +410,28 @@ uv run pytest tests/test_mcp.py
 These tests do not evaluate real-model answer quality. The existing opt-in Ollama
 graph test isolates model behavior with direct synthetic tools; MCP transport is
 covered separately by the interface tests.
+
+## Evaluation and Phoenix (milestone 7)
+
+The [evaluation guide](backend/evaluation/README.md) describes the 30-case
+source-checked dataset, paired baseline/graph runner, automated metric limitations,
+results and failure cases. With the relevant filing indexed and local services
+running, execute from `backend/`:
+
+```bash
+uv run python -m app.evaluation --output evaluation/my-results.jsonl
+```
+
+For local tracing, start the optional collector from the repository root:
+
+```bash
+docker compose --profile observability up -d phoenix
+```
+
+Set `SEC_RESEARCH_PHOENIX_ENABLED=true` before starting the backend or evaluator.
+Open Phoenix at `http://127.0.0.1:6006`. Tracing is disabled by default and its
+collector endpoint is restricted to loopback. The profile uses local persistent
+storage and requires no account or paid service.
 
 ## Test and lint
 

@@ -1,0 +1,534 @@
+{
+  "version": 1,
+  "source_retrieved_at": "2026-11-03T09:32:51.964400+00:00",
+  "cases": [
+    {
+      "id": "apple-01",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What types of products does Apple design, manufacture and market?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "smartphones",
+        "tablets"
+      ],
+      "reference_quote": "The Company designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related services. The Company’s fiscal year is the 52- or 53-week period that ends on the last Saturday of September.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-02",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What operating system is the iPhone based on?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "ios"
+      ],
+      "reference_quote": "iPhone® is the Company’s line of smartphones based on its iOS operating system. The iPhone line includes iPhone 17 Pro, iPhone Air™, iPhone 17, iPhone 16 and iPhone 16e.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-03",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What operating system is the Mac based on?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "macos"
+      ],
+      "reference_quote": "Mac® is the Company’s line of personal computers based on its macOS® operating system. The Mac line includes laptops MacBook Air® and MacBook Pro®, as well as desktops iMac®, Mac mini®, Mac Studio® and Mac Pro®.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-04",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What operating system is the iPad based on?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "ipados"
+      ],
+      "reference_quote": "iPad® is the Company’s line of multipurpose tablets based on its iPadOS® operating system. The iPad line includes iPad Pro®, iPad Air®, iPad and iPad mini®.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-05",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), Under what brand does Apple offer fee-based service and support products?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "applecare"
+      ],
+      "reference_quote": "The Company offers a portfolio of fee-based service and support products under the AppleCare® brand. The offerings provide priority access to Apple technical support, access to the global Apple authorized service network for repair and replacement services, and in many cases additional coverage for instances of accidental damage or theft and loss, depending on the country and type of product.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-06",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What does Apple say the App Store allows customers to discover and download?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "applications",
+        "digital content"
+      ],
+      "reference_quote": "The Company operates various platforms, including the App Store®, that allow customers to discover and download applications and digital content, such as books, music, video, games and podcasts.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-07",
+      "category": "business",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), Which geographic reportable segments does Apple identify?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "americas",
+        "europe",
+        "greater china",
+        "japan"
+      ],
+      "reference_quote": "The Company manages its business primarily on a geographic basis. The Company’s reportable segments consist of the Americas, Europe, Greater China, Japan and Rest of Asia Pacific. Americas includes both North and South America. Europe includes European countries, as well as India, the Middle East and Africa. Greater China includes China mainland, Hong Kong and Taiwan. Rest of Asia Pacific includes Australia, New Zealand and those Asian countries not included in the Company’s other reportable segments. Although the reportable segments provide similar hardware and software products and similar services, each one is managed separately to better align with the location of the Company’s customers and distribution partners and the unique market dynamics of each geographic region.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-08",
+      "category": "risk",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), How does Apple describe its dependence on global and regional economic conditions?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "economic conditions"
+      ],
+      "reference_quote": "The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-09",
+      "category": "risk",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), How can adverse macroeconomic conditions affect demand for Apple products?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "consumer",
+        "demand"
+      ],
+      "reference_quote": "Adverse macroeconomic conditions, including slow growth or recession, high unemployment, inflation, tighter credit, higher interest rates, and currency fluctuations, can adversely impact consumer confidence and spending and materially adversely affect demand for the Company’s products and services. In addition, consumer confidence and spending can be materially adversely affected in response to changes in fiscal and monetary policy, financial market volatility, declines in income or asset values, and other economic factors.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-10",
+      "category": "risk",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What dependence on outsourcing partners does Apple identify?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "outsourcing",
+        "outside"
+      ],
+      "reference_quote": "The Company depends on component and product manufacturing and logistical services provided by outsourcing partners, many of which are located outside of the U.S.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-11",
+      "category": "risk",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What competitive market conditions does Apple describe?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "competition",
+        "price"
+      ],
+      "reference_quote": "The Company’s products and services are offered in highly competitive global markets. These markets are characterized by aggressive price competition, downward pressure on gross margins, continual improvement in product performance, and price sensitivity on the part of consumers and businesses. These markets are further defined by frequent introduction of new products and services, short product life cycles, evolving industry standards, and rapid adoption of technological advancements.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-12",
+      "category": "risk",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), How can weaker foreign currencies affect Apple sales and pricing?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "currencies",
+        "pricing"
+      ],
+      "reference_quote": "The weakening of foreign currencies relative to the U.S. dollar adversely affects the U.S. dollar value of the Company’s foreign currency–denominated sales and earnings, and generally leads the Company to raise international pricing, potentially reducing demand for the Company’s products. In some circumstances, for competitive or other reasons, the Company may decide not to raise international pricing to offset the U.S. dollar’s strengthening, which would adversely affect the U.S. dollar value of the gross margins the Company earns on foreign currency–denominated sales.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-13",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), Why did Greater China net sales decrease in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "iphone",
+        "mac"
+      ],
+      "reference_quote": "Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher net sales of Mac.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-14",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What primarily drove Americas net sales growth in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "iphone",
+        "services"
+      ],
+      "reference_quote": "Americas net sales increased during 2025 compared to 2024 primarily due to higher net sales of iPhone and Services. The weakness in foreign currencies relative to the U.S. dollar had an unfavorable year-over-year impact on Americas net sales during 2025.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-15",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What drove iPad net sales growth in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "air",
+        "mini",
+        "pro"
+      ],
+      "reference_quote": "iPad net sales increased during 2025 compared to 2024 primarily due to higher net sales of iPad Air, iPad mini and iPad, partially offset by lower net sales of iPad Pro.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-16",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), Why did Products gross margin percentage decrease in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "mix",
+        "tariff"
+      ],
+      "reference_quote": "Products gross margin percentage decreased during 2025 compared to 2024 primarily due to a different mix of products and tariff costs, partially offset by other favorable costs.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-17",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), Why did Services gross margin percentage increase in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "mix",
+        "costs"
+      ],
+      "reference_quote": "Services gross margin percentage increased during 2025 compared to 2024 primarily due to a different mix of services, partially offset by higher costs.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-18",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What primarily drove R&D expense growth in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "headcount",
+        "infrastructure"
+      ],
+      "reference_quote": "The growth in R&D expense during 2025 compared to 2024 was primarily driven by increases in headcount-related expenses and infrastructure-related costs.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-19",
+      "category": "management",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), What primarily drove selling, general and administrative expense growth in 2025 versus 2024?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "headcount",
+        "selling"
+      ],
+      "reference_quote": "The growth in selling, general and administrative expense during 2025 compared to 2024 was primarily driven by increases in headcount-related expenses and variable selling expenses.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": null
+    },
+    {
+      "id": "apple-20",
+      "category": "reported_number",
+      "question": "Using only Apple’s 2025 Form 10-K (CIK 320193, accession 0000320193-25-000079), How many weeks did Apple fiscal year 2025 span? Report the stated number; do not calculate.",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "52"
+      ],
+      "reference_quote": "The Company’s fiscal year is the 52- or 53-week period that ends on the last Saturday of September. An additional week is included in the first fiscal quarter every five or six years to realign the Company’s fiscal quarters with calendar quarters, which occurred in the first quarter of 2023. The Company’s fiscal years 2025 and 2024 spanned 52 weeks each, whereas fiscal year 2023 spanned 53 weeks.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "cik": "0000320193",
+      "accession_number": "0000320193-25-000079",
+      "expected_number": "52"
+    },
+    {
+      "id": "scope-21",
+      "category": "financial_calculation",
+      "question": "Calculate Apple revenue growth for the last three years using Company Facts.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "Financial calculation and Company Facts tools are not available.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-22",
+      "category": "financial_calculation",
+      "question": "Calculate Apple operating margin for fiscal 2025.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "No deterministic metric tool is exposed.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-23",
+      "category": "financial_calculation",
+      "question": "Calculate Apple free cash flow for fiscal 2025 from reported cash flow and capital expenditure.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "No deterministic metric tool is exposed.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-24",
+      "category": "multi_company",
+      "question": "Calculate and compare Nvidia and AMD operating margins for 2025.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "No deterministic comparison tool is exposed.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-25",
+      "category": "multi_company",
+      "question": "Compute Apple and Microsoft debt-to-equity ratios for 2025.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "No deterministic ratio or comparison tool is exposed.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-26",
+      "category": "historical_comparison",
+      "question": "Using only the indexed Apple 2025 10-K, identify changes in the exact wording of risk factors versus its 1995 annual report.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "The requested historical filing is outside the declared corpus.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-27",
+      "category": "missing_evidence",
+      "question": "Using only Apple’s 2025 10-K, state Apple exact total revenue for fiscal 2035.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "The requested future result is absent from this filing.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-28",
+      "category": "missing_evidence",
+      "question": "Using only Apple’s 2025 10-K, quote its audited financial results for fiscal 2040.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "The requested future result is absent from this filing.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-29",
+      "category": "missing_evidence",
+      "question": "Using only Apple’s 2025 10-K, report Microsoft fiscal 2040 net income.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "Wrong company and an unavailable future period.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "scope-30",
+      "category": "missing_evidence",
+      "question": "Using only Apple’s 2025 10-K, state the exact release date of the iPhone in 2040.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "The requested future release date is not reported.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    }
+  ],
+  "source_html_sha256": "6468e4b33a672d905bc1f6b86d8a62321f7a287930d1fa1f79a9bde57be10b6c",
+  "source_filing": {
+    "cik": "0000320193",
+    "accession_number": "0000320193-25-000079",
+    "filing_date": "2025-10-31",
+    "report_date": "2025-09-27",
+    "form": "10-K",
+    "primary_document": "aapl-20250927.htm",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+    "source_url": "https://data.sec.gov/submissions/CIK0000320193.json"
+  }
+}

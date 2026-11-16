@@ -45,6 +45,7 @@ from app.research_service import (
 )
 from app.sec_client import SECError
 from app.sec_service import SECService
+from app.telemetry import traced
 
 
 class ResearchState(TypedDict):
@@ -113,6 +114,7 @@ class GraphResearchService(ResearchService):
         finally:
             self._lock.release()
 
+    @traced("research.graph")
     def run(self, request: GraphResearchRequest) -> GraphResearchRun:
         with self._checkpoint(request.run_id) as saver:
             graph = self.build_graph(saver)
@@ -242,7 +244,7 @@ class GraphResearchService(ResearchService):
                     ],
                 }
 
-        return guarded
+        return traced(f"graph.{stage}")(guarded)
 
     def _check_context(self, value: object) -> None:
         if len(json.dumps(value, ensure_ascii=False)) > (

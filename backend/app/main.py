@@ -15,6 +15,7 @@ from app.research_service import ResearchError, ResearchService
 from app.sec_client import SECClient, SECError
 from app.sec_routes import router
 from app.sec_service import SECService
+from app.telemetry import setup_tracing, shutdown_tracing
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -22,6 +23,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        setup_tracing(settings)
         client = SECClient(settings)
         app.state.sec_service = SECService(client)
         app.state.rag_service = RAGService(
@@ -40,6 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             yield
         finally:
             client.close()
+            shutdown_tracing()
 
     app = FastAPI(
         title=settings.app_name,

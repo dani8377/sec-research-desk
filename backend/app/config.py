@@ -12,6 +12,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    phoenix_enabled: bool = False
+    phoenix_endpoint: str = Field(
+        default="http://127.0.0.1:6006/v1/traces",
+        pattern=r"^http://(127\.0\.0\.1|localhost):[0-9]{1,5}/v1/traces$",
+    )
+
     app_name: str = Field(default="SEC Research Desk", min_length=1)
     debug: bool = False
     sec_user_agent: str | None = Field(

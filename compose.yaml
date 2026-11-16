@@ -15,5 +15,19 @@ services:
       timeout: 3s
       retries: 10
 
+  phoenix:
+    # Tested Phoenix 21.0.0; pin the image used for the recorded experiment.
+    image: arizephoenix/phoenix@sha256:1f9a144a5357b4973e93a15718f050247cb7a4ee7b7c6c06ecb91b5eed3fbaad
+    profiles: [observability]
+    ports:
+      - "127.0.0.1:6006:6006"
+    environment:
+      PHOENIX_WORKING_DIR: /data
+      PHOENIX_ENABLE_AUTH: "false"
+      PHOENIX_ALLOWED_PROVIDERS: OLLAMA
+    volumes:
+      - sec_research_phoenix:/data
+
 volumes:
+  sec_research_phoenix:
   sec_research_postgres:

@@ -24,6 +24,7 @@ from app.research_prompts import RESEARCH_SYSTEM, SYNTHESIS
 from app.research_tools import research_tools
 from app.sec_client import SECError
 from app.sec_service import SECService
+from app.telemetry import traced
 
 ModelInvoker = Callable[[Runnable[Any, Any], list[BaseMessage]], Any]
 
@@ -53,6 +54,7 @@ class ResearchService:
         self.rag = rag
         self.settings = settings
 
+    @traced("research.baseline")
     def research(self, request: ResearchRequest) -> ResearchResult:
         evidence: dict[str, Evidence] = {}
         tools = research_tools(self.sec, self.rag, evidence)
