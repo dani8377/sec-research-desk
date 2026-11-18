@@ -72,6 +72,11 @@ def test_cosine_ranking_citations_and_filters(store: VectorStore) -> None:
         "test-model",
     )
     store.replace(source, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], "other-dimensions")
+    inventory = store.inventory("test-model")
+    assert len(inventory) == 2
+    assert all(item["chunk_count"] == 2 for item in inventory)
+    assert all(item["dimensions"] == 2 for item in inventory)
+    assert all(len(item["chunk_ids_sha256"]) == 64 for item in inventory)
     request = SearchRequest(cik="1", query="supply chain")
     result = store.search(request, [1.0, 0.0], "test-model")
     assert len(result) == 2
@@ -84,12 +89,21 @@ def test_cosine_ranking_citations_and_filters(store: VectorStore) -> None:
         {"accession_number": "0000000001-24-000002"},
         {"report_date_from": date(2024, 1, 1)},
         {"report_date_to": date(2022, 12, 31)},
-        {"section": "absent section"},
     ):
         assert (
             store.search(request.model_copy(update=filters), [1.0, 0.0], "test-model")
             == []
         )
+    with pytest.raises(RAGError, match="Available sections"):
+        store.search(
+            request.model_copy(update={"section": "absent section"}),
+            [1.0, 0.0],
+            "test-model",
+        )
+    alias = store.search(
+        request.model_copy(update={"section": "Risk Factors"}), [1.0, 0.0], "test-model"
+    )
+    assert [item.chunk for item in alias] == [source[0]]
     filtered = request.model_copy(update={"section": source[1].section, "limit": 1})
     assert store.search(filtered, [1.0, 0.0], "test-model")[0].chunk == source[1]
     for section in ("Item 7", "Item 7."):

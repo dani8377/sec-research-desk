@@ -99,3 +99,67 @@ def test_real_sdk_tool_parenting_failures_and_cleanup(monkeypatch):
     finally:
         instrumentor.uninstrument()
         provider.shutdown()
+
+
+def test_score_annotations_keep_human_reviews_distinct():
+    row = {
+        "span_id": "1" * 16,
+        "case_id": "case",
+        "workflow": "graph",
+        "execution_success": True,
+        "metrics": {
+            "answer_terms_match": False,
+            "semantic_correctness": True,
+            "unsupported_claim_rate": None,
+        },
+    }
+    annotations = telemetry.score_annotations([row])
+    assert {a["name"] for a in annotations} == {
+        "execution_success",
+        "answer_terms_match",
+    }
+    assert all(a["annotator_kind"] == "CODE" for a in annotations)
+    row["review"] = {"reviewer": "human tester", "notes": "Checked source passage"}
+    annotations = telemetry.score_annotations([row])
+    human = next(a for a in annotations if a["name"] == "semantic_correctness")
+    assert human["annotator_kind"] == "HUMAN"
+    assert human["result"]["explanation"] == "Checked source passage"
+
+
+def test_annotation_export_handles_ingestion_delay_and_failure(monkeypatch):
+    import httpx
+
+    real_client = httpx.Client
+    requests = []
+    statuses = iter([404, 200])
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(next(statuses))
+
+    monkeypatch.setattr(
+        telemetry.httpx,
+        "Client",
+        lambda **kw: real_client(transport=httpx.MockTransport(handler)),
+    )
+    monkeypatch.setattr(telemetry.time, "sleep", lambda seconds: None)
+    row = {
+        "span_id": "1" * 16,
+        "case_id": "case",
+        "workflow": "baseline",
+        "execution_success": False,
+        "metrics": {"citation_validity": None},
+    }
+    settings = Settings(_env_file=None, phoenix_enabled=True)
+    assert telemetry.export_scores([row], settings) == {"exported": 1, "error": None}
+    assert len(requests) == 2
+    assert requests[0].url.path == "/v1/span_annotations"
+    monkeypatch.setattr(
+        telemetry.httpx,
+        "Client",
+        lambda **kw: real_client(
+            transport=httpx.MockTransport(lambda request: httpx.Response(503))
+        ),
+    )
+    result = telemetry.export_scores([row], settings)
+    assert result["exported"] == 0 and "failed" in result["error"]

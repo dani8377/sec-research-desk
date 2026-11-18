@@ -156,7 +156,7 @@ def test_tool_failure_is_never_empty_evidence(graph_setup: tuple) -> None:
 def test_invalid_input_can_be_corrected_once(graph_setup: tuple) -> None:
     service, _, rag, model, _, _ = graph_setup
     model.bind_tools.return_value.invoke.side_effect = [
-        call(cik="1", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
         call(),
         AIMessage(content="done"),
     ]
@@ -171,8 +171,8 @@ def test_invalid_input_can_be_corrected_once(graph_setup: tuple) -> None:
 def test_repeated_invalid_inputs_fail(graph_setup: tuple) -> None:
     service, _, rag, model, _, _ = graph_setup
     model.bind_tools.return_value.invoke.side_effect = [
-        call(cik="1", section="Item 1A"),
-        call(cik="1", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
     ]
     result = service.run(request())
     assert result.status == "failed"
@@ -214,7 +214,9 @@ def test_invalid_tool_selection_fails(graph_setup: tuple, reply: AIMessage) -> N
 def test_tool_budget_is_bounded(graph_setup: tuple) -> None:
     service, _, rag, model, _, _ = graph_setup
     service.settings.research_max_tool_calls = 2
-    model.bind_tools.return_value.invoke.side_effect = [call(), call(), call()]
+    model.bind_tools.return_value.invoke.side_effect = [
+        call(cik="1", query=q) for q in ("risks", "facilities", "strategy")
+    ]
     result = service.run(request())
     assert result.status == "failed" and "tool-call limit" in result.errors[0].message
     assert rag.search.call_count == 2
@@ -228,8 +230,10 @@ def test_context_budget_is_bounded(graph_setup: tuple, evidence: Evidence) -> No
         embedding_model="test", evidence=[evidence.model_copy(update={"chunk": chunk})]
     )
     result = service.run(request())
-    assert result.status == "failed" and "context limit" in result.errors[0].message
-    assert result.model_calls == 2  # the rejected next request never reaches Ollama
+    assert result.status == "completed"
+    assert result.result.status == "insufficient_evidence"
+    assert "context budget" in result.result.limitations[0]
+    assert result.model_calls == 3
     rag.search.assert_called_once()
     synthesizer.invoke.assert_not_called()
 
@@ -384,3 +388,31 @@ def test_real_ollama_graph(evidence: Evidence, monkeypatch: pytest.MonkeyPatch) 
     assert result.result.status == "answered"
     assert result.result.evidence == [evidence]
     assert "search_filing_sections" in result.tools_called
+
+
+def test_repeated_search_routes_to_synthesis_and_preserves_full_evidence(graph_setup):
+    service, _, rag, model, _, synthesizer = graph_setup
+    model.bind_tools.return_value.invoke.side_effect = [call(), call()]
+    result = service.run(request())
+    assert result.status == "completed" and result.result.status == "answered"
+    rag.search.assert_called_once()
+    assert any(
+        "Repeated identical" in warning for warning in result.result.tool_warnings
+    )
+    assert "Supply chain disruption" in synthesizer.invoke.call_args.args[0][1].content
+
+
+def test_missing_query_repair_is_saved_in_checkpoints(graph_setup):
+    service, _, rag, model, _, _ = graph_setup
+    model.bind_tools.return_value.invoke.side_effect = [
+        call(cik="1"),
+        AIMessage(content="DONE"),
+    ]
+    result = service.run(request())
+    assert result.result.tool_errors == []
+    assert result.result.tool_warnings
+    assert rag.search.call_args.args[0].query == request().question
+    assert (
+        service.get_run(result.run_id).result.tool_warnings
+        == result.result.tool_warnings
+    )

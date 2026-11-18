@@ -68,7 +68,21 @@ class RAGService:
     def search(self, request: SearchRequest) -> SearchResult:
         vector = self.embeddings.query(request.query)
         evidence = self.store.search(request, vector, self.embeddings.model)
-        return SearchResult(embedding_model=self.embeddings.model, evidence=evidence)
+        warnings = []
+        if not evidence and request.section and request.allow_section_fallback:
+            evidence = self.store.search(
+                request.model_copy(update={"section": None}),
+                vector,
+                self.embeddings.model,
+            )
+            warnings.append(
+                f"No evidence matched section {request.section!r}; searched once "
+                "without the section filter, preserving company, filing, form "
+                "and dates."
+            )
+        return SearchResult(
+            embedding_model=self.embeddings.model, evidence=evidence, warnings=warnings
+        )
 
     @staticmethod
     def _validate_source(filing: Filing) -> None:

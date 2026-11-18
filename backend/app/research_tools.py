@@ -31,6 +31,11 @@ class FilingQuery(BaseModel):
 
 class EvidenceQuery(SearchRequest):
     model_config = ConfigDict(extra="forbid")
+    allow_section_fallback: bool = Field(
+        default=True,
+        description="If the section search is empty, search once across the same "
+        "filing/company/period. Set false when the user requires a specific section.",
+    )
     limit: int = Field(default=3, ge=1, le=5)
 
 
@@ -85,7 +90,10 @@ TOOL_DEFINITIONS: tuple[tuple[str, str, type[BaseModel]], ...] = (
         "search_filing_sections",
         "Search already indexed 10-K sections by CIK and optional filing/"
         "period filters. Use limit=3 (maximum 5). section accepts an exact "
-        "title or Item identifier such as Item 7. "
+        "title, short section name (Business, Risk Factors), or Item identifier "
+        "such as Item 7. Supply query even with a section filter. "
+        "An empty section search may retry once without that filter and report "
+        "a warning; other metadata filters remain in place. "
         "Empty results mean no matching indexed evidence. "
         "Cite chunk.chunk_id. Does not download or ingest filings.",
         EvidenceQuery,

@@ -45,6 +45,7 @@ class ResearchResult(ResearchDraft):
     tools_called: list[str]
     model_calls: int
     tool_errors: list[str] = Field(default_factory=list)
+    tool_warnings: list[str] = Field(default_factory=list)
 
 
 class GraphResearchRequest(ResearchRequest):

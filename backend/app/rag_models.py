@@ -38,6 +38,7 @@ class SearchRequest(BaseModel):
         max_length=200,
         description="Exact title or Item identifier, for example Item 7 or Item 1A.",
     )
+    allow_section_fallback: bool = False
     limit: int = Field(default=5, ge=1, le=20)
 
     @model_validator(mode="after")
@@ -83,3 +84,4 @@ class Evidence(BaseModel):
 class SearchResult(BaseModel):
     embedding_model: str
     evidence: list[Evidence]
+    warnings: list[str] = Field(default_factory=list)

@@ -244,3 +244,12 @@ tracing cleanup. A real local export smoke check confirmed that Phoenix stored
 a parent span and a LangChain tool span; the full experiment also exported
 model, tool, graph and evaluation spans to that collector. A final API query
 confirmed 60 stored evaluation spans and 178 model-call spans.
+
+
+## Reliability follow-up
+
+See [the reliability follow-up](RELIABILITY.md) for fixes to section filters,
+tool arguments, repeated retrieval and context budgets, the new Phoenix score
+annotations and trace links, manual review commands, and the separate Microsoft
+evaluation set. The original dataset and results above are preserved as the
+initial reference experiment.

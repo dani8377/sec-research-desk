@@ -344,3 +344,49 @@ def test_rag_api(settings: Settings, filing: Filing) -> None:
             == 503
         )
         assert client.get("/health").status_code == 200
+
+
+def test_section_aliases_resolve_against_actual_index_labels():
+    from app.rag_store import resolve_section
+
+    available = [
+        "Item 1. BUSINESS",
+        "Item 1A. Risk Factors",
+        "Item 7. Management Discussion",
+    ]
+    assert resolve_section("business", available) == "Item 1. BUSINESS"
+    assert resolve_section("Risk Factors", available) == "Item 1A. Risk Factors"
+    assert resolve_section("item 7.", available) == "Item 7"
+    with pytest.raises(RAGError, match="Available sections") as error:
+        resolve_section("Imaginary Section", available)
+    assert error.value.status_code == 422
+    assert resolve_section("Business", []) == "Business"
+
+
+def test_section_fallback_is_opt_in_bounded_and_keeps_other_filters(settings, filing):
+    service = make_service(settings, filing)
+    request = SearchRequest(
+        cik="1",
+        query="supply chain",
+        section="Item 7",
+        accession_number=filing.accession_number,
+        report_date_from=date(2023, 1, 1),
+        allow_section_fallback=True,
+    )
+    service.store.search.side_effect = [[], []]
+    result = service.search(request)
+    assert result.evidence == [] and result.warnings
+    assert service.store.search.call_count == 2
+    fallback = service.store.search.call_args.args[0]
+    assert fallback.model_dump(exclude={"section"}) == request.model_dump(
+        exclude={"section"}
+    )
+    assert fallback.section is None
+    service.embeddings.query.assert_called_once()
+    service.store.search.reset_mock(side_effect=True)
+    service.store.search.return_value = []
+    strict = service.search(
+        request.model_copy(update={"allow_section_fallback": False})
+    )
+    assert strict.warnings == []
+    service.store.search.assert_called_once()

@@ -182,7 +182,7 @@ all embeddings succeed; a failure preserves the previous stored evidence.
 Search never downloads or ingests documents automatically.
 
 Search requires a company CIK and accepts optional `accession_number`, `section`
-(exact returned section label or Item identifier such as `Item 7`),
+(returned section label, short title such as `Business`, or Item identifier such as `Item 7`),
 `report_date_from`, `report_date_to` (inclusive report dates), and `limit` (1–20). The supported `form` is `10-K`. It uses exact
 cosine search in pgvector, filtered by company, model and dimensions. Each result
 contains similarity and the verbatim normalized chunk text, original filing URL,
@@ -227,14 +227,16 @@ No new framework is needed: `langchain-core` is declared directly alongside the
 existing `langchain-ollama` integration.
 
 The response contains `status` (`answered` or `insufficient_evidence`), `claims`,
-`limitations`, `evidence`, `model`, `tools_called`, `model_calls` and `tool_errors`.
+`limitations`, `evidence`, `model`, `tools_called`, `model_calls`, `tool_errors` and `tool_warnings`.
 Each claim is marked `reported_fact` or `interpretation` and cites retrieved chunk IDs.
 Synthesis receives the original question and retrieved evidence directly, without
 intermediate model prose. Python rejects unknown IDs and attaches the original
 text and filing metadata.
 Company lookup and filing history are navigation tools, not claim evidence.
 Missing indexed data should produce an explicit insufficient-evidence result.
-SEC/RAG failures abort the request rather than becoming successful empty results.
+SEC/RAG service failures abort the request rather than becoming successful empty
+results. Invalid section-filter responses receive the same one correction
+opportunity as invalid tool inputs.
 An invalid tool input gets one correction opportunity via an explicit error tool
 message; a second invalid attempt fails. Invalid attempts consume the tool budget
 and remain visible in `tools_called` and `tool_errors` if correction succeeds.
@@ -412,6 +414,10 @@ graph test isolates model behavior with direct synthetic tools; MCP transport is
 covered separately by the interface tests.
 
 ## Evaluation and Phoenix (milestone 7)
+
+The [reliability follow-up](backend/evaluation/RELIABILITY.md) adds section-name
+resolution, disclosed section fallback, missing-query repair, compact context,
+duplicate-call control, Phoenix score annotations, and manual review tooling.
 
 The [evaluation guide](backend/evaluation/README.md) describes the 30-case
 source-checked dataset, paired baseline/graph runner, automated metric limitations,

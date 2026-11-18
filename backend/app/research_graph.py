@@ -30,6 +30,12 @@ from app.mcp_client import mcp_research_tools
 from app.rag_embeddings import RAGError
 from app.rag_models import Evidence
 from app.rag_service import RAGService
+from app.research_context import (
+    prepare_arguments,
+    selection_reply,
+    tool_key,
+    tool_message_content,
+)
 from app.research_models import (
     GraphResearchRequest,
     GraphResearchRun,
@@ -61,6 +67,9 @@ class ResearchState(TypedDict):
     result: dict | None
     tools_called: list[str]
     tool_errors: list[str]
+    tool_warnings: list[str]
+    executed_tools: list[str]
+    retrieval_complete: bool
     model_calls: int
     errors: list[dict]
 
@@ -133,6 +142,9 @@ class GraphResearchService(ResearchService):
                 "result": None,
                 "tools_called": [],
                 "tool_errors": [],
+                "tool_warnings": [],
+                "executed_tools": [],
+                "retrieval_complete": False,
                 "model_calls": 0,
                 "errors": [],
             }
@@ -201,6 +213,8 @@ class GraphResearchService(ResearchService):
             return "synthesize"
         if state["pending_tools"]:
             return "execute_tool"
+        if state.get("retrieval_complete", False):
+            return "synthesize"
         # After tools, ask the model whether more navigation/evidence is needed.
         messages = messages_from_dict(state["messages"])
         if messages and isinstance(messages[-1], AIMessage):
@@ -277,10 +291,10 @@ class GraphResearchService(ResearchService):
 
     def _select_tools(self, state: ResearchState, invoke: ModelInvoker) -> dict:
         tools = mcp_research_tools(self.settings, {})
-        self._check_context(state["messages"])
+        messages = self._selection_messages(messages_from_dict(state["messages"]))
         reply = invoke(
             chat_model(self.settings).bind_tools(tools),
-            messages_from_dict(state["messages"]),
+            messages,
         )
         if not isinstance(reply, AIMessage) or reply.invalid_tool_calls:
             raise ResearchError("Ollama returned malformed tool calls")
@@ -296,12 +310,14 @@ class GraphResearchService(ResearchService):
         names = {tool.name for tool in tools}
         if any(call["name"] not in names for call in reply.tool_calls):
             raise ResearchError("Ollama requested an unknown research tool")
-        messages = state["messages"] + messages_to_dict([reply])
-        self._check_context(messages)
-        return {"messages": messages, "pending_tools": reply.tool_calls}
+        messages.append(selection_reply(reply))
+        return {
+            "messages": messages_to_dict(messages),
+            "pending_tools": reply.tool_calls,
+        }
 
     def _execute_tool(self, state: ResearchState) -> dict:
-        self._check_context(state["messages"])
+        messages = self._selection_messages(messages_from_dict(state["messages"]))
         evidence = {
             key: Evidence.model_validate(item)
             for key, item in state["evidence"].items()
@@ -312,11 +328,45 @@ class GraphResearchService(ResearchService):
         call = state["pending_tools"][0]
         called = state["tools_called"] + [call["name"]]
         errors = list(state["tool_errors"])
+        warnings = list(state.get("tool_warnings", []))
+        executed = list(state.get("executed_tools", []))
+        complete = state.get("retrieval_complete", False)
         status = "success"
         try:
-            result = tools[call["name"]].invoke(call["args"])
-            content = json.dumps(result, ensure_ascii=False)
-        except ValidationError as exc:
+            arguments, repairs = prepare_arguments(
+                call["name"], call["args"], state["question"]
+            )
+            warnings.extend(repairs)
+            key = tool_key(call["name"], arguments)
+            if key in executed:
+                complete = True
+                note = (
+                    "Repeated identical tool request skipped; "
+                    "synthesis uses retained evidence."
+                )
+                warnings.append(note)
+                content = json.dumps({"duplicate_request": True, "note": note})
+            else:
+                known_ids = set(evidence)
+                result = tools[call["name"]].invoke(arguments)
+                executed.append(key)
+                warnings.extend(result.get("warnings", []))
+                result = {**result, "warnings": result.get("warnings", []) + repairs}
+                content = tool_message_content(call["name"], result, known_ids)
+        except (ValidationError, SECError, RAGError, ResearchError) as exc:
+            if not isinstance(exc, ValidationError) and exc.status_code != 422:
+                return {
+                    "tools_called": called,
+                    "status": "failed",
+                    "errors": state["errors"]
+                    + [
+                        {
+                            "stage": "execute_tool",
+                            "status_code": exc.status_code,
+                            "message": str(exc),
+                        }
+                    ],
+                }
             if errors:
                 # Persist the failed attempt as well as the terminal error.
                 return {
@@ -337,36 +387,28 @@ class GraphResearchService(ResearchService):
             content = json.dumps(
                 {
                     "error": "Invalid inputs; correct fields and retry once",
-                    "details": [
-                        {"field": list(e["loc"]), "message": e["msg"]}
-                        for e in exc.errors()
-                    ],
+                    "details": (
+                        [
+                            {"field": list(e["loc"]), "message": e["msg"]}
+                            for e in exc.errors()
+                        ]
+                        if isinstance(exc, ValidationError)
+                        else str(exc)
+                    ),
                 }
             )
             errors.append(f"{call['name']}: {content}")
             status = "error"
-        except (SECError, RAGError, ResearchError) as exc:
-            return {
-                "tools_called": called,
-                "status": "failed",
-                "errors": state["errors"]
-                + [
-                    {
-                        "stage": "execute_tool",
-                        "status_code": exc.status_code,
-                        "message": str(exc),
-                    }
-                ],
-            }
-        messages = state["messages"] + messages_to_dict(
-            [ToolMessage(content, tool_call_id=call["id"], status=status)]
-        )
+        messages.append(ToolMessage(content, tool_call_id=call["id"], status=status))
         # Save the successful tool result before the next node checks its budget.
         return {
             "tools_called": called,
             "tool_errors": errors,
-            "messages": messages,
+            "messages": messages_to_dict(messages),
             "pending_tools": state["pending_tools"][1:],
+            "tool_warnings": list(dict.fromkeys(warnings)),
+            "executed_tools": executed,
+            "retrieval_complete": complete,
             "evidence": {
                 key: item.model_dump(mode="json") for key, item in evidence.items()
             },
@@ -404,5 +446,6 @@ class GraphResearchService(ResearchService):
             state["tools_called"],
             state["model_calls"],
             state["tool_errors"],
+            tool_warnings=state.get("tool_warnings", []),
         )
         return {"status": "completed", "result": result.model_dump(mode="json")}

@@ -5,10 +5,12 @@ import hashlib
 import json
 import re
 from datetime import UTC, datetime
+from importlib.metadata import version
 from pathlib import Path
 from time import perf_counter
 from typing import Literal
 
+import httpx
 from langchain_core.tracers.context import collect_runs
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -23,7 +25,7 @@ from app.research_service import ResearchService
 from app.sec_client import SECClient
 from app.sec_models import Filing
 from app.sec_service import SECService
-from app.telemetry import setup_tracing, shutdown_tracing, trace_span
+from app.telemetry import export_scores, setup_tracing, shutdown_tracing, trace_span
 
 DATASET = Path(__file__).resolve().parents[1] / "evaluation" / "dataset.json"
 
@@ -231,10 +233,16 @@ def evaluate_case(
     result = None
     errors = []
     graph_run = None
+    trace_id = span_id = None
     with (
         collect_runs() as collected,
         trace_span("evaluation.case", case_id=case.id, workflow=workflow) as span,
     ):
+        if span is not None:
+            context = span.get_span_context()
+            trace_id, span_id = f"{context.trace_id:032x}", f"{context.span_id:016x}"
+            span.set_attribute("input.value", case.question)
+            span.set_attribute("input.mime_type", "text/plain")
         try:
             if workflow == "baseline":
                 result = baseline.research(ResearchRequest(question=case.question))
@@ -255,8 +263,29 @@ def evaluate_case(
         if span is not None:
             span.set_attribute("evaluation.execution_success", result is not None)
             span.set_attribute("evaluation.status_match", metrics["status_match"])
+            span.set_attribute("output.mime_type", "application/json")
+            span.set_attribute(
+                "output.value",
+                json.dumps(
+                    {
+                        "status": result.status if result else "failed",
+                        "claims": [claim.model_dump() for claim in result.claims]
+                        if result
+                        else [],
+                        "limitations": result.limitations if result else [],
+                        "errors": errors,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            if result is None:
+                from opentelemetry.trace import Status, StatusCode
+
+                span.set_status(Status(StatusCode.ERROR, "Research execution failed"))
     return {
         "case_id": case.id,
+        "trace_id": trace_id,
+        "span_id": span_id,
         "category": case.category,
         "workflow": workflow,
         "started_at": started_at,
@@ -304,6 +333,38 @@ def summarize(rows: list[dict]) -> dict:
     return summary
 
 
+def runtime_manifest(settings: Settings) -> dict:
+    """Record model weights, implementation and package versions before a live run."""
+    response = httpx.get(settings.ollama_base_url.rstrip("/") + "/api/tags", timeout=5)
+    response.raise_for_status()
+    installed = {m["name"]: m["digest"] for m in response.json()["models"]}
+    models = {}
+    for name in (settings.chat_model, settings.embedding_model):
+        tag = name if ":" in name else name + ":latest"
+        if tag not in installed:
+            raise ValueError(f"Required local model is not installed: {tag}")
+        models[name] = installed[tag]
+    digest = hashlib.sha256()
+    for source in sorted(Path(__file__).parent.glob("*.py")):
+        digest.update(source.name.encode() + b"\0" + source.read_bytes())
+    return {
+        "model_digests": models,
+        "implementation_sha256": digest.hexdigest(),
+        "package_versions": {
+            name: version(name)
+            for name in (
+                "langchain-core",
+                "langchain-ollama",
+                "langgraph",
+                "mcp",
+                "arize-phoenix-otel",
+                "openinference-instrumentation-langchain",
+            )
+        },
+        "embedding_dimensions": settings.embedding_dimensions,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=DATASET)
@@ -325,16 +386,22 @@ def main() -> None:
     if not cases or (args.cases and set(args.cases) - {c.id for c in cases}):
         parser.error("Unknown or empty case selection")
     settings = Settings()
+    runtime = runtime_manifest(settings)
+    store = VectorStore(settings)
+    inventory = store.inventory(settings.embedding_model)
     provider = setup_tracing(settings)
     client = SECClient(settings)
     sec = SECService(client)
-    rag = RAGService(sec, LocalEmbeddings(settings), VectorStore(settings), settings)
+    rag = RAGService(sec, LocalEmbeddings(settings), store, settings)
     baseline = ResearchService(sec, rag, settings)
     graph = GraphResearchService(sec, rag, settings)
     # Explicit allowlist: never serialize settings containing credentials/contact data.
     manifest = {
+        **runtime,
+        "corpus": inventory,
         "dataset_sha256": hashlib.sha256(raw).hexdigest(),
         "dataset_version": dataset.version,
+        "evaluator_version": "reliability-v2",
         "case_ids": [case.id for case in cases],
         "chat_model": settings.chat_model,
         "embedding_model": settings.embedding_model,
@@ -365,7 +432,18 @@ def main() -> None:
                         f"status_match={row['metrics']['status_match']}",
                         flush=True,
                     )
-            output.write(json.dumps({"summary": summarize(rows)}) + "\n")
+            if provider:
+                provider.force_flush()
+            exported = export_scores(rows, settings)
+            output.write(
+                json.dumps(
+                    {
+                        "summary": summarize(rows),
+                        "phoenix_annotations": exported,
+                    }
+                )
+                + "\n"
+            )
     finally:
         client.close()
         if provider:

@@ -159,7 +159,9 @@ def test_invalid_tools(setup: tuple, reply: AIMessage) -> None:
 def test_bounded_calls(setup: tuple) -> None:
     service, _, rag, model = setup
     service.settings.research_max_tool_calls = 2
-    model.bind_tools.return_value.invoke.side_effect = [call(), call(), call()]
+    model.bind_tools.return_value.invoke.side_effect = [
+        call(cik="1", query=q) for q in ("risks", "facilities", "strategy")
+    ]
     with pytest.raises(ResearchError, match="tool-call limit"):
         service.research(ResearchRequest(question="risks"))
     assert rag.search.call_count == 2
@@ -195,9 +197,11 @@ def test_context_bound(setup: tuple, evidence: Evidence) -> None:
     rag.search.return_value = SearchResult(
         embedding_model="test", evidence=[evidence.model_copy(update={"chunk": chunk})]
     )
-    with pytest.raises(ResearchError, match="context limit"):
-        service.research(ResearchRequest(question="risks"))
-    assert model.bind_tools.return_value.invoke.call_count == 1
+    result = service.research(ResearchRequest(question="risks"))
+    assert result.status == "insufficient_evidence"
+    assert "context budget" in result.limitations[0]
+    assert model.bind_tools.return_value.invoke.call_count == 2
+    model.with_structured_output.assert_not_called()
 
 
 def test_tools_delegate(evidence: Evidence) -> None:
@@ -296,7 +300,7 @@ def test_real_ollama(evidence: Evidence) -> None:
 def test_invalid_arguments_can_be_corrected_once(setup: tuple) -> None:
     service, _, rag, model = setup
     model.bind_tools.return_value.invoke.side_effect = [
-        call(cik="1", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
         call(),
         AIMessage(content="done"),
     ]
@@ -314,10 +318,84 @@ def test_invalid_arguments_can_be_corrected_once(setup: tuple) -> None:
 def test_repeated_invalid_arguments_fail(setup: tuple) -> None:
     service, _, rag, model = setup
     model.bind_tools.return_value.invoke.side_effect = [
-        call(cik="1", section="Item 1A"),
-        call(cik="1", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
+        call(cik="1", query="", section="Item 1A"),
     ]
     with pytest.raises(ResearchError, match="repeatedly supplied invalid"):
         service.research(ResearchRequest(question="risks"))
     rag.search.assert_not_called()
     model.with_structured_output.assert_not_called()
+
+
+def test_missing_query_is_repaired_and_disclosed(setup: tuple) -> None:
+    service, _, rag, model = setup
+    model.bind_tools.return_value.invoke.side_effect = [
+        call(cik="1", section="Item 1A"),
+        AIMessage(content="DONE"),
+    ]
+    result = service.research(ResearchRequest(question="What risks are reported?"))
+    assert rag.search.call_args.args[0].query == "What risks are reported?"
+    assert result.tool_errors == []
+    assert "original question" in result.tool_warnings[0]
+
+
+def test_repeated_search_stops_without_another_io_call(setup: tuple) -> None:
+    service, _, rag, model = setup
+    model.bind_tools.return_value.invoke.side_effect = [call(), call()]
+    result = service.research(ResearchRequest(question="risks"))
+    assert result.status == "answered" and result.model_calls == 3
+    rag.search.assert_called_once()
+    assert any("Repeated identical" in warning for warning in result.tool_warnings)
+
+
+def test_no_evidence_never_reaches_model_synthesis(setup: tuple) -> None:
+    service, _, rag, model = setup
+    rag.search.return_value = SearchResult(embedding_model="test", evidence=[])
+    model.with_structured_output.return_value.invoke.side_effect = AssertionError(
+        "Empty evidence must never be synthesized"
+    )
+    result = service.research(ResearchRequest(question="Calculate revenue growth"))
+    assert result.status == "insufficient_evidence" and result.claims == []
+    assert result.model_calls == 2
+    model.with_structured_output.assert_not_called()
+
+
+def test_synthesis_budget_keeps_whole_passages_and_discloses_omissions(setup, evidence):
+    from app.research_prompts import SYNTHESIS
+
+    service, _, _, model = setup
+    service.settings.research_max_context_chars = 5000
+    first = evidence.model_copy(
+        update={
+            "chunk": evidence.chunk.model_copy(
+                update={"text": "a" * 1200, "char_end": 1200}
+            )
+        }
+    )
+    excluded = evidence.model_copy(
+        update={
+            "chunk": evidence.chunk.model_copy(
+                update={"chunk_id": "excluded", "text": "b" * 7000, "char_end": 7000}
+            )
+        }
+    )
+    result = service.synthesize(
+        model, "risks", {first.chunk.chunk_id: first, excluded.chunk.chunk_id: excluded}
+    )
+    payload = model.with_structured_output.return_value.invoke.call_args.args[0][
+        1
+    ].content
+    assert len(payload) + len(SYNTHESIS) < 5000
+    packet = json.loads(payload)["evidence"]
+    assert len(packet) == 1 and packet[0]["text"] == first.chunk.text
+    assert packet[0]["filing"] == first.chunk.filing.model_dump(mode="json")
+    assert any(
+        "1 retrieved passages were excluded" in note for note in result.limitations
+    )
+    model.with_structured_output.return_value.invoke.return_value = draft("excluded")
+    with pytest.raises(ResearchError, match="supplied to synthesis"):
+        service.synthesize(
+            model,
+            "risks",
+            {first.chunk.chunk_id: first, excluded.chunk.chunk_id: excluded},
+        )

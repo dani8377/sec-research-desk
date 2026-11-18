@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "source_retrieved_at": "2026-11-18T11:31:59.564021+00:00",
+  "source_html_sha256": "78a507e1d8afa48d803a7c323d42bb8d4836fa10b87dbd8dd356f3cd86248e0f",
+  "source_filing": {
+    "cik": "0000789019",
+    "accession_number": "0000950170-25-100235",
+    "filing_date": "2025-07-30",
+    "report_date": "2025-06-30",
+    "form": "10-K",
+    "primary_document": "msft-20250630.htm",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+    "source_url": "https://data.sec.gov/submissions/CIK0000789019.json"
+  },
+  "cases": [
+    {
+      "id": "msft-heldout-01",
+      "category": "business",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), What mission does Microsoft state?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "empower",
+        "person",
+        "organization"
+      ],
+      "reference_quote": "Microsoft is a technology company committed to making digital technology and artificial intelligence (“AI”) available broadly and doing so responsibly. Our mission is to empower every person and every organization on the planet to achieve more.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": null
+    },
+    {
+      "id": "msft-heldout-02",
+      "category": "reported_number",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), In what year was Microsoft founded? Quote the reported year.",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "1975"
+      ],
+      "reference_quote": "Founded in 1975, we develop and support software, services, devices, and solutions that deliver new value for customers and help people and businesses realize their full potential.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": "1975"
+    },
+    {
+      "id": "msft-heldout-03",
+      "category": "business",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), What types of devices does Microsoft say it designs and sells?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "tablets",
+        "consoles"
+      ],
+      "reference_quote": "Our products include operating systems, cross-device productivity and collaboration applications, server applications, business solution applications, desktop and server management tools, software development tools, and video games. We also design and sell devices, including PCs, tablets, gaming and entertainment consoles, other intelligent devices, and related accessories.",
+      "section": "Item 1",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": null
+    },
+    {
+      "id": "msft-heldout-04",
+      "category": "risk",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), What competitive risk could adversely affect Microsoft results of operations?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "competition",
+        "operations"
+      ],
+      "reference_quote": "We face intense competition across all markets for our products and services, which could adversely affect our results of operations.",
+      "section": "Item 1A",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": null
+    },
+    {
+      "id": "msft-heldout-05",
+      "category": "management",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), What are two significant expense categories Microsoft identifies?",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "employees",
+        "cloud"
+      ],
+      "reference_quote": "We generate revenue by offering a wide range of cloud-based solutions, content, and other services to people and businesses; licensing and supporting an array of software products; delivering relevant online advertising to a global audience; and designing and selling devices. Our most significant expenses are related to compensating employees; supporting and investing in our cloud-based services, including datacenter operations; designing, manufacturing, marketing, and selling our other products and services; and income taxes.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": null
+    },
+    {
+      "id": "msft-heldout-06",
+      "category": "reported_number",
+      "question": "Using only Microsoft’s 2025 Form 10-K (CIK 0000789019, accession 0000950170-25-100235), What percentage increase in Dynamics products and cloud services revenue is reported? Quote the reported figure; do not calculate.",
+      "expected_status": "answered",
+      "required_tools": [
+        "search_filing_sections"
+      ],
+      "expected_terms": [
+        "15"
+      ],
+      "reference_quote": "Dynamics products and cloud services revenue increased 15% driven by Dynamics 365 revenue growth of 19%.",
+      "section": "Item 7",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "cik": "0000789019",
+      "accession_number": "0000950170-25-100235",
+      "expected_number": "15"
+    },
+    {
+      "id": "msft-heldout-07",
+      "category": "unsupported",
+      "question": "Calculate Microsoft free cash flow for fiscal 2025.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "No deterministic financial calculation tool is exposed.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    },
+    {
+      "id": "msft-heldout-08",
+      "category": "missing_evidence",
+      "question": "Using only Microsoft’s 2025 annual filing, state its audited net income for fiscal 2040.",
+      "expected_status": "insufficient_evidence",
+      "required_tools": [],
+      "expected_terms": [],
+      "reference_quote": "The future fiscal period is not reported in the specified 2025 filing.",
+      "section": null,
+      "source_url": null,
+      "cik": null,
+      "accession_number": null,
+      "expected_number": null
+    }
+  ]
+}

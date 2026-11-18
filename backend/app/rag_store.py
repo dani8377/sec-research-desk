@@ -1,5 +1,6 @@
 """Small exact cosine-search store; filing replacements are transactional."""
 
+import hashlib
 import re
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -12,6 +13,45 @@ from psycopg.types.json import Jsonb
 from app.config import Settings
 from app.rag_embeddings import RAGError
 from app.rag_models import Evidence, FilingChunk, SearchRequest
+
+
+def resolve_section(section: str, available: list[str]) -> str:
+    item = re.fullmatch(r"item\s+(\d{1,2}[a-c]?)\.?", section.strip(), re.I)
+    if item:
+        return f"Item {item[1].upper()}"
+
+    def key(text: str) -> str:
+        return "".join(char for char in text.casefold() if char.isalnum())
+
+    requested = key(section)
+    matches = [
+        title
+        for title in available
+        if requested
+        in {
+            key(title),
+            key(re.sub(r"^item\s+\d{1,2}[a-c]?\.\s*", "", title, flags=re.I)),
+        }
+    ]
+    codes = {
+        match[1].upper()
+        for title in matches
+        if (match := re.match(r"^Item (\d{1,2}[A-C]?)\.", title, re.I))
+    }
+    if len(matches) > 1 and len(codes) == 1:
+        return f"Item {codes.pop()}"
+    if len(matches) == 1:
+        return matches[0]
+    if not available:
+        return (
+            section  # No indexed corpus; report missing evidence, not an invalid alias.
+        )
+    raise RAGError(
+        "Unknown or ambiguous section filter. Available sections: "
+        + "; ".join(available),
+        422,
+    )
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS filing_chunks (
@@ -55,6 +95,30 @@ class VectorStore:
             raise RAGError(
                 "Local vector database unavailable; check PostgreSQL and pgvector"
             ) from exc
+
+    def inventory(self, model: str) -> list[dict]:
+        """Read chunk identifiers to fingerprint an evaluation corpus."""
+        with self._connection() as conn:
+            rows = conn.execute(
+                "SELECT cik, accession_number, dimensions, chunk_id "
+                "FROM filing_chunks WHERE embedding_model = %s "
+                "ORDER BY cik, accession_number, dimensions, chunk_id",
+                (model,),
+            ).fetchall()
+        groups: dict[tuple, list[str]] = {}
+        for cik, accession, dimensions, chunk_id in rows:
+            groups.setdefault((cik, accession, dimensions), []).append(chunk_id)
+        return [
+            {
+                "cik": cik,
+                "accession_number": accession,
+                "dimensions": dimensions,
+                "embedding_model": model,
+                "chunk_count": len(ids),
+                "chunk_ids_sha256": hashlib.sha256("\n".join(ids).encode()).hexdigest(),
+            }
+            for (cik, accession, dimensions), ids in groups.items()
+        ]
 
     def replace(
         self, chunks: list[FilingChunk], vectors: list[list[float]], model: str
@@ -115,20 +179,27 @@ class VectorStore:
             if value is not None:
                 conditions.append(f"{column} {operator} %s")
                 values.append(value)
-        if request.section is not None:
-            # Match an Item boundary, so Item 7 never includes Item 7A.
-            item = re.fullmatch(r"Item ([0-9]{1,2}[A-C]?)\.?", request.section)
-            if item:
-                conditions.append("section LIKE %s")
-                values.append(f"Item {item[1]}. %")
-            else:
-                conditions.append("section = %s")
-                values.append(request.section)
-        # Exact search keeps small local corpora simple and applies filters first.
-        sql = f"""SELECT evidence, 1 - (embedding <=> %s) AS similarity
+        with self._connection() as conn:
+            section = request.section
+            if section is not None:
+                available = conn.execute(
+                    "SELECT DISTINCT section FROM filing_chunks WHERE "
+                    + " AND ".join(conditions)
+                    + " ORDER BY section",
+                    values,
+                ).fetchall()
+                section = resolve_section(section, [row[0] for row in available])
+                item = re.fullmatch(r"Item ([0-9]{1,2}[A-C]?)", section)
+                if item:
+                    conditions.append("section LIKE %s")
+                    values.append(f"Item {item[1]}. %")
+                else:
+                    conditions.append("section = %s")
+                    values.append(section)
+            # Exact search keeps small local corpora simple and applies filters first.
+            sql = f"""SELECT evidence, 1 - (embedding <=> %s) AS similarity
                   FROM filing_chunks WHERE {" AND ".join(conditions)}
                   ORDER BY embedding <=> %s, chunk_id LIMIT %s"""
-        with self._connection() as conn:
             rows = conn.execute(
                 sql, [Vector(vector), *values, Vector(vector), request.limit]
             ).fetchall()
